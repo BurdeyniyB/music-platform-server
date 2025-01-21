@@ -12,6 +12,9 @@ yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
 
+# Static folder to persist files
+!/static/
+
 # OS
 .DS_Store
 
