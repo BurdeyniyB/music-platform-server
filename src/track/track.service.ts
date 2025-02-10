@@ -17,8 +17,7 @@ export class TrackService {
 
     async create(dto: CreateTrackDto, picture, audio): Promise<Track> {
         try {
-            console.log(picture);
-            console.log(audio);
+            console.log(dto);
             const audioPath = this.fileService.createFile(FileType.AUDIO, audio);
             const imagePath = this.fileService.createFile(FileType.IMAGE, picture);
             const track = await this.trackModel.create({ ...dto, listens: 0, picture: imagePath, audio: audioPath });
@@ -28,21 +27,24 @@ export class TrackService {
         }
     }
 
-    async getAll(count = 5, offset = 0): Promise<Track[]> {
+    async getAll(count = 6): Promise<Track[]> {
         try {
-            const tracks = await this.trackModel.find().skip(offset).limit(count);
+            const tracks = await this.trackModel.find().limit(count);
             return tracks;
         } catch (error) {
             throw new InternalServerErrorException('Failed to fetch tracks', error.message);
         }
     }
 
-    async search(query: string): Promise<Track[]>{
+    async search(query: string): Promise<Track[]> {
         const tracks = await this.trackModel.find({
-            name: {$regex:new RegExp(query, 'i')}
-        })
+            $or: [
+                { name: { $regex: new RegExp(query, 'i') } },
+                { artist: { $regex: new RegExp(query, 'i') } }
+            ]
+        });
         return tracks;
-    }
+    }    
 
     async getOne(id: ObjectId): Promise<Track> {
         if (!isValidObjectId(id)) {
@@ -79,6 +81,9 @@ export class TrackService {
             throw new BadRequestException('Invalid track ID');
         }
         const track = await this.trackModel.findByIdAndDelete(id);
+        this.fileService.removeFile(track.picture);
+        this.fileService.removeFile(track.audio);
+
         if (!track) {
             throw new NotFoundException('Track not found');
         }
